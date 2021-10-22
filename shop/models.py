@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db.models import Sum, F
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.utils.safestring import mark_safe
 from uuid import uuid4
 
 
@@ -22,6 +23,10 @@ class Category(models.Model):
     def __str__(self):
         return self.title
     
+    def image_preview(self):
+        return mark_safe('<img src="{}" width="100" />'.format(self.image.url)) if self.image else '-'
+    image_preview.short_description = '圖片預覽'
+    
     class Meta:
         verbose_name = '產品類別'
         verbose_name_plural = '產品類別'
@@ -36,6 +41,10 @@ class Product(models.Model):
     
     def __str__(self):
         return self.title
+    
+    def image_preview(self):
+        return mark_safe('<img src="{}" width="100" />'.format(self.primary_image.url)) if self.primary_image else '-'
+    image_preview.short_description = '圖片預覽'
     
     class Meta:
         verbose_name = '產品'
@@ -57,6 +66,12 @@ class Order(models.Model):
     total = models.DecimalField('總價', max_digits=6, decimal_places=2, default=0.00)
     status = models.CharField('訂單狀態', max_length=63, choices=StatusChoices.choices, default=StatusChoices.ORDER_SENT)
     products = models.ManyToManyField(Product, verbose_name='訂單內容', related_name='orders', through='Mapping')
+    # TODO: remove blank, null = True
+    name = models.CharField('姓名', max_length=15, blank=True, null=True)
+    phone = models.CharField('電話', max_length=15, blank=True, null=True)
+    address = models.CharField('地址', max_length=15, blank=True, null=True)
+    
+    note = models.TextField(blank=True, null=True)
     
     def __str__(self):
         return f"{self.id}"
@@ -71,9 +86,10 @@ class Mapping(models.Model):
     quantity = models.IntegerField('數量', default=1)
     # subtotal = models.DecimalField('小記', max_digits=6, decimal_places=2, default=0.00)
     
-    @property
+    
     def subtotal(self):
         return self.product.discounted_price * self.quantity
+    subtotal.short_description = '小計'
     
     def __str__(self):
         return f"訂單編號：{self.order.id}-{self.product.title}"
@@ -86,10 +102,10 @@ class Mapping(models.Model):
 @receiver(post_save, sender=Mapping)
 def update_order_total(sender, *args, **kwargs):
     instance = kwargs['instance']
-    print(f'抓到的instance：{instance}')
-    print(f'抓到的instance：{kwargs["instance"].__dict__}')
+    # print(f'抓到的instance：{instance}')
+    # print(f'抓到的instance：{kwargs["instance"].__dict__}')
     order = instance.order
-    print(f'抓到的instance的order：{order}')
+    # print(f'抓到的instance的order：{order}')
     output = Mapping.objects.filter(order=order).aggregate(t=Sum(F('product__discounted_price')*F('quantity')))
     order.total = output['t'] if output['t'] is not None else 0.0
     order.save()

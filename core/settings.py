@@ -140,3 +140,5 @@ MEDIA_URL = '/media/'
 # admin interface 安全性設定
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 SILENCED_SYSTEM_CHECKS = ['security.W019']
+
+LOGIN_REDIRECT_URL = '/'

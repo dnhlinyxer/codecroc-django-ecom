@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse
 from django.http.response import Http404, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.views.generic import ListView, DetailView
 
@@ -85,3 +86,30 @@ class ProductListView(ListView):
     #    return Product.objects.filter(title='new product')
 
     context_object_name = 'products'
+
+    title = '商品列表'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context['title'] = self.title
+        return context
+
+
+class ProductDetailMixin(object):
+    title = None
+    template_name = 'shop/product-detail-generic.html'
+
+    def get_title(self):
+        return self.title
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context['title'] = self.get_title()
+        return context
+
+
+class ProductDetailView(LoginRequiredMixin, ProductDetailMixin, DetailView):
+    login_url = '/auth/login'
+    title = "Hello Product"
+    model = Product
+    template_name = 'shop/product-detail-generic.html'
